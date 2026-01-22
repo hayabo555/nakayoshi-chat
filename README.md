@@ -1,1 +1,2 @@
+いいね！！
 # nakayoshi-chat
