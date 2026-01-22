@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仲良しCHAT</title>
+    <title>仲良しCHAT Pro</title>
     <link rel="stylesheet" href="style.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -54,13 +54,13 @@
         </header>
         <div id="messages"></div>
         <div class="input-area">
-            <input type="text" id="msg-input" placeholder="メッセージ...">
-            <button onclick="sendMsg()" style="color: #007aff; font-weight: bold; border: none; background: none;">送信</button>
+            <input type="text" id="msg-input" placeholder="メッセージを入力...">
+            <button onclick="sendMsg()" id="send-btn">送信</button>
         </div>
     </div>
 
     <script>
-        const socket = io(); // 一本化しているのでURL指定不要
+        const socket = io(); // Render一本化ならこれでOK
         let myName = "";
         let currentRoom = "";
 
@@ -71,7 +71,7 @@
 
         function login() {
             myName = document.getElementById('username').value;
-            if(!myName) return alert("名前を入力してね");
+            if(!myName) return alert("名前を入れてね");
             document.getElementById('my-name-display').innerText = myName;
             showPage('home');
         }
@@ -91,19 +91,34 @@
 
         function sendMsg() {
             const input = document.getElementById('msg-input');
-            if(!input.value) return;
-            socket.emit('chat-message', { roomId: currentRoom, name: myName, text: input.value });
+            const text = input.value.trim();
+            if(!text) return;
+
+            // サーバーに送信（サーバーが受信すると chat-message イベントを全員に返す）
+            socket.emit('chat-message', {
+                roomId: currentRoom,
+                name: myName,
+                text: text
+            });
             input.value = "";
         }
 
+        // メッセージを受信したとき（自分のも含む）
         socket.on('chat-message', (data) => {
+            const msgBox = document.getElementById('messages');
             const div = document.createElement('div');
             const isMe = data.name === myName;
+            
             div.className = isMe ? 'msg-bubble my-msg' : 'msg-bubble other-msg';
             div.innerHTML = (isMe ? "" : `<div class="user-name">${data.name}</div>`) + data.text;
-            const msgBox = document.getElementById('messages');
+            
             msgBox.appendChild(div);
             msgBox.scrollTop = msgBox.scrollHeight;
+        });
+
+        // Enterキーでも送信できるようにする
+        document.getElementById('msg-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMsg();
         });
     </script>
 </body>
