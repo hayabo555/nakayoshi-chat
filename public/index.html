@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仲良しCHAT</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+    <div id="page-login" class="page active">
+        <header>仲良しCHAT 🌸</header>
+        <div class="content" style="text-align: center; padding-top: 50px;">
+            <input type="text" id="username" placeholder="名前を入力">
+            <button onclick="login()" class="btn-main">はじめる</button>
+        </div>
+    </div>
+
+    <div id="page-home" class="page">
+        <header>ホーム</header>
+        <div class="content">
+            <div class="user-info">👤 あなた： <span id="my-name-display"></span></div>
+            <p style="color: #999; text-align: center; margin-top: 20px;">フレンドはまだいません</p>
+        </div>
+        <footer>
+            <button onclick="showPage('home')">🏠<br>ホーム</button>
+            <button onclick="showPage('rooms')">💬<br>おぷちゃ</button>
+            <button onclick="openYoutube()">📺<br>YouTube</button>
+        </footer>
+    </div>
+
+    <div id="page-rooms" class="page">
+        <header>オープンチャット</header>
+        <div class="content">
+            <div class="room-join">
+                <input type="text" id="target-room" placeholder="部屋名を入力">
+                <button onclick="joinRoom()">入室</button>
+            </div>
+            <div onclick="joinRoom('雑談部屋')" class="room-card">🌸 雑談部屋</div>
+            <div onclick="joinRoom('ゲーム部屋')" class="room-card">🎮 ゲーム部屋</div>
+        </div>
+        <footer>
+            <button onclick="showPage('home')">🏠<br>ホーム</button>
+            <button onclick="showPage('rooms')">💬<br>おぷちゃ</button>
+            <button onclick="openYoutube()">📺<br>YouTube</button>
+        </footer>
+    </div>
+
+    <div id="page-chat" class="page">
+        <header>
+            <button onclick="showPage('rooms')" style="float: left; color: white; background: none; border: none; font-size: 20px;">◀</button>
+            <span id="room-title">部屋名</span>
+        </header>
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="msg-input" placeholder="メッセージ...">
+            <button onclick="sendMsg()" style="color: #007aff; font-weight: bold; border: none; background: none;">送信</button>
+        </div>
+    </div>
+
+    <script>
+        const socket = io(); // 一本化しているのでURL指定不要
+        let myName = "";
+        let currentRoom = "";
+
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
+        }
+
+        function login() {
+            myName = document.getElementById('username').value;
+            if(!myName) return alert("名前を入力してね");
+            document.getElementById('my-name-display').innerText = myName;
+            showPage('home');
+        }
+
+        function openYoutube() {
+            window.location.href = "https://choco-tube-nana-01.onrender.com";
+        }
+
+        function joinRoom(name) {
+            currentRoom = name || document.getElementById('target-room').value;
+            if(!currentRoom) return;
+            document.getElementById('room-title').innerText = currentRoom;
+            document.getElementById('messages').innerHTML = ""; 
+            socket.emit('join-room', currentRoom);
+            showPage('chat');
+        }
+
+        function sendMsg() {
+            const input = document.getElementById('msg-input');
+            if(!input.value) return;
+            socket.emit('chat-message', { roomId: currentRoom, name: myName, text: input.value });
+            input.value = "";
+        }
+
+        socket.on('chat-message', (data) => {
+            const div = document.createElement('div');
+            const isMe = data.name === myName;
+            div.className = isMe ? 'msg-bubble my-msg' : 'msg-bubble other-msg';
+            div.innerHTML = (isMe ? "" : `<div class="user-name">${data.name}</div>`) + data.text;
+            const msgBox = document.getElementById('messages');
+            msgBox.appendChild(div);
+            msgBox.scrollTop = msgBox.scrollHeight;
+        });
+    </script>
+</body>
+</html>
