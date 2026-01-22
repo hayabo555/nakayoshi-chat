@@ -3,34 +3,37 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
+const https = require('https');
 
-// publicフォルダの中身（HTML/CSS）を公開
 app.use(express.static(path.join(__dirname, 'public')));
 
-io.on('connection', (socket) => {
-    console.log('ユーザーが接続しました');
+// --- 常に動作させるためのセルフ・ピング機能 ---
+// 自分のRender URLをここに設定するか、環境変数から取得
+const APP_URL = process.env.RENDER_EXTERNAL_URL || `https://${process.env.RENDER_SERVICE_NAME}.onrender.com`;
 
-    // ルーム入室処理
-    socket.on('join-room', (roomId) => {
-        socket.rooms.forEach(room => {
-            if (room !== socket.id) socket.leave(room);
+setInterval(() => {
+    if (APP_URL.includes("onrender.com")) {
+        https.get(APP_URL, (res) => {
+            console.log(`Self-ping sent to ${APP_URL}: status ${res.statusCode}`);
+        }).on('error', (e) => {
+            console.error(`Self-ping error: ${e.message}`);
         });
+    }
+}, 1000 * 60 * 20); // 20分ごとに自分を起こす
+
+// --- Socket.io 通信ロジック ---
+io.on('connection', (socket) => {
+    socket.on('join-room', (roomId) => {
+        socket.rooms.forEach(room => { if (room !== socket.id) socket.leave(room); });
         socket.join(roomId);
-        console.log(`入室: ${roomId}`);
     });
 
-    // メッセージ受信と全員への転送
     socket.on('chat-message', (data) => {
-        // 同じ部屋にいる全員（自分含む）に送る
         io.to(data.roomId).emit('chat-message', data);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('切断されました');
     });
 });
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`Server started on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

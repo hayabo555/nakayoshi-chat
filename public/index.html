@@ -2,67 +2,85 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>仲良しCHAT Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Naka-Chat Pro</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
     <div id="page-login" class="page active">
-        <header>仲良しCHAT 🌸</header>
-        <div class="content" style="text-align: center; padding-top: 50px;">
-            <input type="text" id="username" placeholder="名前を入力">
-            <button onclick="login()" class="btn-main">はじめる</button>
+        <div class="login-box">
+            <div class="logo"><i class="fa-solid fa-comments"></i></div>
+            <h2>おかえりなさい！</h2>
+            <p>友達が待っています</p>
+            <input type="text" id="username" placeholder="名前を入力してください">
+            <button onclick="login()">ログイン</button>
         </div>
     </div>
 
     <div id="page-home" class="page">
         <header>ホーム</header>
         <div class="content">
-            <div class="user-info">👤 あなた： <span id="my-name-display"></span></div>
-            <p style="color: #999; text-align: center; margin-top: 20px;">フレンドはまだいません</p>
+            <div class="my-profile">
+                <div class="avatar"><i class="fa-solid fa-circle-user"></i></div>
+                <div class="name-area"><span id="my-name-display"></span> <small>(Online)</small></div>
+            </div>
+            <div class="section-title">フレンド (0)</div>
+            <p class="empty-msg">まだフレンドがいません。おぷちゃで探してみましょう！</p>
         </div>
-        <footer>
-            <button onclick="showPage('home')">🏠<br>ホーム</button>
-            <button onclick="showPage('rooms')">💬<br>おぷちゃ</button>
-            <button onclick="openYoutube()">📺<br>YouTube</button>
-        </footer>
+        <nav class="bottom-nav"></nav>
     </div>
 
     <div id="page-rooms" class="page">
         <header>オープンチャット</header>
         <div class="content">
-            <div class="room-join">
-                <input type="text" id="target-room" placeholder="部屋名を入力">
-                <button onclick="joinRoom()">入室</button>
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="target-room" placeholder="部屋名を入力...">
+                <button onclick="joinRoom()">参加</button>
             </div>
-            <div onclick="joinRoom('雑談部屋')" class="room-card">🌸 雑談部屋</div>
-            <div onclick="joinRoom('ゲーム部屋')" class="room-card">🎮 ゲーム部屋</div>
+            <div class="room-list">
+                <div onclick="joinRoom('雑談部屋')" class="room-card">
+                    <div class="room-icon">🌸</div>
+                    <div class="room-info"><b>雑談部屋</b><br><small>誰でも歓迎！楽しく話そう</small></div>
+                </div>
+                <div onclick="joinRoom('ゲーム部屋')" class="room-card">
+                    <div class="room-icon">🎮</div>
+                    <div class="room-info"><b>ゲーム部屋</b><br><small>最新ゲームの話題はこちら</small></div>
+                </div>
+            </div>
         </div>
-        <footer>
-            <button onclick="showPage('home')">🏠<br>ホーム</button>
-            <button onclick="showPage('rooms')">💬<br>おぷちゃ</button>
-            <button onclick="openYoutube()">📺<br>YouTube</button>
-        </footer>
+        <nav class="bottom-nav"></nav>
     </div>
 
     <div id="page-chat" class="page">
-        <header>
-            <button onclick="showPage('rooms')" style="float: left; color: white; background: none; border: none; font-size: 20px;">◀</button>
+        <header class="chat-header">
+            <button onclick="showPage('rooms')" class="back-btn"><i class="fa-solid fa-chevron-left"></i></button>
             <span id="room-title">部屋名</span>
+            <i class="fa-solid fa-bars"></i>
         </header>
         <div id="messages"></div>
         <div class="input-area">
+            <i class="fa-solid fa-plus"></i>
             <input type="text" id="msg-input" placeholder="メッセージを入力...">
-            <button onclick="sendMsg()" id="send-btn">送信</button>
+            <button onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
 
     <script>
-        const socket = io(); // Render一本化ならこれでOK
+        const socket = io();
         let myName = "";
         let currentRoom = "";
+
+        // 下部ナビを生成
+        const navHtml = `
+            <button onclick="showPage('home')"><i class="fa-solid fa-user"></i><span>ホーム</span></button>
+            <button onclick="showPage('rooms')"><i class="fa-solid fa-comment"></i><span>チャット</span></button>
+            <button onclick="openYoutube()"><i class="fa-brands fa-youtube" style="color:red"></i><span>YouTube</span></button>
+        `;
+        document.querySelectorAll('.bottom-nav').forEach(nav => nav.innerHTML = navHtml);
 
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -71,14 +89,12 @@
 
         function login() {
             myName = document.getElementById('username').value;
-            if(!myName) return alert("名前を入れてね");
+            if(!myName) return;
             document.getElementById('my-name-display').innerText = myName;
             showPage('home');
         }
 
-        function openYoutube() {
-            window.location.href = "https://choco-tube-nana-01.onrender.com";
-        }
+        function openYoutube() { window.location.href = "https://choco-tube-nana-01.onrender.com"; }
 
         function joinRoom(name) {
             currentRoom = name || document.getElementById('target-room').value;
@@ -91,34 +107,19 @@
 
         function sendMsg() {
             const input = document.getElementById('msg-input');
-            const text = input.value.trim();
-            if(!text) return;
-
-            // サーバーに送信（サーバーが受信すると chat-message イベントを全員に返す）
-            socket.emit('chat-message', {
-                roomId: currentRoom,
-                name: myName,
-                text: text
-            });
+            if(!input.value.trim()) return;
+            socket.emit('chat-message', { roomId: currentRoom, name: myName, text: input.value });
             input.value = "";
         }
 
-        // メッセージを受信したとき（自分のも含む）
         socket.on('chat-message', (data) => {
             const msgBox = document.getElementById('messages');
-            const div = document.createElement('div');
             const isMe = data.name === myName;
-            
+            const div = document.createElement('div');
             div.className = isMe ? 'msg-bubble my-msg' : 'msg-bubble other-msg';
-            div.innerHTML = (isMe ? "" : `<div class="user-name">${data.name}</div>`) + data.text;
-            
+            div.innerHTML = (isMe ? "" : `<div class="user-name">${data.name}</div>`) + `<div class="text">${data.text}</div>`;
             msgBox.appendChild(div);
-            msgBox.scrollTop = msgBox.scrollHeight;
-        });
-
-        // Enterキーでも送信できるようにする
-        document.getElementById('msg-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMsg();
+            msgBox.scrollTo({ top: msgBox.scrollHeight, behavior: 'smooth' });
         });
     </script>
 </body>
