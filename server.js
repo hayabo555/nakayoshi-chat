@@ -7,10 +7,10 @@ const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
 let onlineUsers = {}; 
-let chatHistories = {}; // 部屋ごとの履歴を保存
+let chatHistories = {}; // 部屋ごとの履歴
 
 io.on('connection', (socket) => {
-    // ログイン：人数カウント用
+    // ログイン処理
     socket.on('login', (username) => {
         onlineUsers[socket.id] = username;
         io.emit('update-online-count', Object.keys(onlineUsers).length);

@@ -21,8 +21,8 @@
 
     <div id="page-chat" class="page">
         <header>
-            <div id="room-display" onclick="createGroup()" style="cursor:pointer">
-                <i class="fa-solid fa-comments"></i> <span id="current-room-name">全員チャット</span> ▾
+            <div id="room-display">
+                <i class="fa-solid fa-comments"></i> <span id="current-room-name">全員チャット</span>
             </div>
             <div class="online-badge">
                 <i class="fa-solid fa-circle"></i> <span id="online-count">0</span> Online
@@ -37,10 +37,22 @@
         </div>
 
         <footer>
-            <button class="active" onclick="location.reload()"><i class="fa-solid fa-house"></i>リセット</button>
-            <button onclick="createGroup()"><i class="fa-solid fa-users-rectangle"></i>グループ</button>
+            <button class="active" onclick="changeRoom('全員チャット')"><i class="fa-solid fa-globe"></i>全員</button>
+            <button onclick="openCreateModal()"><i class="fa-solid fa-users-plus"></i>作成</button>
             <button onclick="window.location.href='https://choco-tube-nana-01.onrender.com'"><i class="fa-brands fa-youtube"></i>YouTube</button>
         </footer>
+    </div>
+
+    <div id="modal-group" class="modal">
+        <div class="modal-content">
+            <h3>グループ作成</h3>
+            <p>部屋名または相手の名前を入力してね</p>
+            <input type="text" id="new-room-name" placeholder="例：ひみつの部屋">
+            <div class="modal-btns">
+                <button onclick="closeModal()" class="btn-close">キャンセル</button>
+                <button onclick="confirmCreateGroup()" class="btn-create">作成</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -59,16 +71,22 @@
             changeRoom('全員チャット');
         }
 
+        function openCreateModal() { document.getElementById('modal-group').style.display = 'flex'; }
+        function closeModal() { document.getElementById('modal-group').style.display = 'none'; }
+
+        function confirmCreateGroup() {
+            const name = document.getElementById('new-room-name').value.trim();
+            if(name) {
+                changeRoom(name);
+                closeModal();
+            }
+        }
+
         function changeRoom(name) {
             currentRoom = name;
             document.getElementById('current-room-name').innerText = name;
             document.getElementById('messages').innerHTML = "";
             socket.emit('join-room', name);
-        }
-
-        function createGroup() {
-            const name = prompt("グループ名、または個人チャットする相手の名前を入力してね！\n（相手も同じ名前を入れると繋がるよ）");
-            if(name) changeRoom(name);
         }
 
         function sendMsg() {
