@@ -6,31 +6,40 @@ const path = require('path');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-let onlineCount = 0;
-let chatHistory = []; // 📝 メッセージ履歴を保存する配列
-const MAX_HISTORY = 100; // 最大100件まで保存（サーバーのメモリ節約のため）
+let onlineUsers = {}; 
+let chatHistories = {}; // 部屋ごとの履歴を保存
 
 io.on('connection', (socket) => {
-    onlineCount++;
-    io.emit('update-online-count', onlineCount);
+    // ログイン：人数カウント用
+    socket.on('login', (username) => {
+        onlineUsers[socket.id] = username;
+        io.emit('update-online-count', Object.keys(onlineUsers).length);
+    });
 
-    // 📥 新しく入った人に過去の履歴を全部送る
-    socket.emit('load-history', chatHistory);
+    // 部屋（グループ・個人）への入室
+    socket.on('join-room', (roomName) => {
+        socket.rooms.forEach(r => { if(r !== socket.id) socket.leave(r); });
+        socket.join(roomName);
+        
+        if (!chatHistories[roomName]) chatHistories[roomName] = [];
+        socket.emit('load-history', chatHistories[roomName]);
+    });
 
+    // メッセージ送信
     socket.on('chat-message', (data) => {
         const time = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
         const msgData = { ...data, time };
+        
+        if (!chatHistories[data.room]) chatHistories[data.room] = [];
+        chatHistories[data.room].push(msgData);
+        if (chatHistories[data.room].length > 100) chatHistories[data.room].shift();
 
-        // 履歴に追加
-        chatHistory.push(msgData);
-        if (chatHistory.length > MAX_HISTORY) chatHistory.shift(); // 古い順に削除
-
-        io.emit('chat-message', msgData); 
+        io.to(data.room).emit('chat-message', msgData);
     });
 
     socket.on('disconnect', () => {
-        onlineCount--;
-        io.emit('update-online-count', onlineCount);
+        delete onlineUsers[socket.id];
+        io.emit('update-online-count', Object.keys(onlineUsers).length);
     });
 });
 

@@ -3,70 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>仲良しCHAT Pro</title>
+    <title>仲良しCHAT 🌸</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <div id="login-screen" class="login-screen">
+    <div id="page-login" class="page active">
         <div class="login-card">
-            <i class="fa-solid fa-heart" style="font-size: 40px; color: var(--accent);"></i>
-            <h2 style="color: #555;">仲良しCHAT</h2>
-            <input type="text" id="username" placeholder="名前を入力..." maxlength="10">
-            <button onclick="login()" style="width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 15px; font-weight: bold;">はじめる</button>
+            <i class="fa-solid fa-heart-pulse"></i>
+            <h2>仲良しCHAT</h2>
+            <input type="text" id="username" placeholder="名前を入力">
+            <button onclick="login()">はじめる</button>
         </div>
     </div>
 
-    <header>
-        <div style="font-weight: 800; color: #555; font-size: 1.2rem;">🌸 Naka-Chat</div>
-        <div class="online-badge"><i class="fa-solid fa-users"></i> <span id="online-count">0</span></div>
-    </header>
+    <div id="page-chat" class="page">
+        <header>
+            <div id="room-display" onclick="createGroup()" style="cursor:pointer">
+                <i class="fa-solid fa-comments"></i> <span id="current-room-name">全員チャット</span> ▾
+            </div>
+            <div class="online-badge">
+                <i class="fa-solid fa-circle"></i> <span id="online-count">0</span> Online
+            </div>
+        </header>
 
-    <div id="messages"></div>
+        <div id="messages"></div>
 
-    <div class="input-area">
-        <input type="text" id="msg-input" placeholder="メッセージ..." autocomplete="off">
-        <button class="send-btn" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+        <div class="input-area">
+            <input type="text" id="msg-input" placeholder="メッセージを入力...">
+            <button class="send-btn" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+
+        <footer>
+            <button class="active" onclick="location.reload()"><i class="fa-solid fa-house"></i>リセット</button>
+            <button onclick="createGroup()"><i class="fa-solid fa-users-rectangle"></i>グループ</button>
+            <button onclick="window.location.href='https://choco-tube-nana-01.onrender.com'"><i class="fa-brands fa-youtube"></i>YouTube</button>
+        </footer>
     </div>
-
-    <footer>
-        <button class="active"><i class="fa-solid fa-comment-dots"></i>チャット</button>
-        <button onclick="window.location.href='https://choco-tube-nana-01.onrender.com'"><i class="fa-brands fa-youtube" style="color:#ff0000"></i>YouTube</button>
-    </footer>
 
     <script>
         const socket = io();
         let myName = "";
+        let currentRoom = "全員チャット";
         const sound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
         function login() {
             const user = document.getElementById('username').value.trim();
             if(!user) return alert("名前を教えてね！");
             myName = user;
-            document.getElementById('login-screen').style.display = 'none';
+            socket.emit('login', myName);
+            document.getElementById('page-login').classList.remove('active');
+            document.getElementById('page-chat').classList.add('active');
+            changeRoom('全員チャット');
+        }
+
+        function changeRoom(name) {
+            currentRoom = name;
+            document.getElementById('current-room-name').innerText = name;
+            document.getElementById('messages').innerHTML = "";
+            socket.emit('join-room', name);
+        }
+
+        function createGroup() {
+            const name = prompt("グループ名、または個人チャットする相手の名前を入力してね！\n（相手も同じ名前を入れると繋がるよ）");
+            if(name) changeRoom(name);
         }
 
         function sendMsg() {
             const input = document.getElementById('msg-input');
             if(!input.value.trim()) return;
-            socket.emit('chat-message', { name: myName, text: input.value });
+            socket.emit('chat-message', { room: currentRoom, name: myName, text: input.value });
             input.value = "";
-        }
-
-        function addMessage(data) {
-            const box = document.getElementById('messages');
-            const isMe = data.name === myName;
-            const div = document.createElement('div');
-            div.className = `msg-bubble ${isMe ? 'my-msg' : 'other-msg'}`;
-            div.innerHTML = `
-                ${isMe ? '' : '<div class="user-name">' + data.name + '</div>'}
-                <div>${data.text}</div>
-                <div class="msg-time">${data.time}</div>
-            `;
-            box.appendChild(div);
-            box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
         }
 
         socket.on('load-history', (history) => history.forEach(addMessage));
@@ -75,6 +84,16 @@
             if(data.name !== myName) sound.play().catch(()=>{});
         });
         socket.on('update-online-count', (count) => document.getElementById('online-count').innerText = count);
+
+        function addMessage(data) {
+            const box = document.getElementById('messages');
+            const isMe = data.name === myName;
+            const div = document.createElement('div');
+            div.className = `msg-bubble ${isMe ? 'my-msg' : 'other-msg'}`;
+            div.innerHTML = `${isMe ? '' : '<div class="user-name">'+data.name+'</div>'}<div>${data.text}</div><div class="msg-time">${data.time}</div>`;
+            box.appendChild(div);
+            box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+        }
 
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMsg(); });
     </script>
