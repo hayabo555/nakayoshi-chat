@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>仲良しCHAT Super 🌸</title>
+    <title>仲良しCHAT 🌸</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
@@ -12,9 +12,9 @@
 
     <div id="page-login" class="page active">
         <div class="login-card">
-            <i class="fa-solid fa-face-smile-beam"></i>
+            <i class="fa-solid fa-face-kiss-wink-heart"></i>
             <h2>仲良しCHAT</h2>
-            <input type="text" id="username" placeholder="ニックネーム" maxlength="10">
+            <input type="text" id="username" placeholder="名前を入力" maxlength="10">
             <button onclick="login()">はじめる</button>
         </div>
     </div>
@@ -22,27 +22,27 @@
     <div id="page-chat" class="page">
         <header>
             <div id="room-display" onclick="handleAdminClick()">
-                <i class="fa-solid fa-comments"></i> <span id="current-room-name">全員チャット</span>
+                <i class="fa-solid fa-heart"></i> <span id="current-room-name">全員チャット</span>
             </div>
             <div id="admin-tools" style="display:none;">
                 <button onclick="clearHistory()" class="admin-btn">履歴削除</button>
             </div>
-            <div class="online-badge">
-                <i class="fa-solid fa-circle"></i> <span id="online-count">0</span> Online
+            <div class="online-badge" onclick="showUsers()" style="cursor:pointer">
+                <i class="fa-solid fa-users"></i> <span id="online-count">0</span> Online
             </div>
         </header>
 
         <div id="messages"></div>
 
         <div class="input-area">
-            <input type="text" id="msg-input" placeholder="/おみくじ も引けるよ！" autocomplete="off">
+            <input type="text" id="msg-input" placeholder="メッセージを入力..." autocomplete="off">
             <button class="send-btn" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
 
         <footer>
-            <button class="active" onclick="changeRoom('全員チャット')"><i class="fa-solid fa-globe"></i>全員</button>
-            <button onclick="openCreateModal()"><i class="fa-solid fa-users-plus"></i>グループ</button>
-            <button onclick="window.location.href='https://choco-tube-nana-01.onrender.com'"><i class="fa-brands fa-youtube"></i>YouTube</button>
+            <button class="active" onclick="changeRoom('全員チャット')"><i class="fa-solid fa-house"></i>全員</button>
+            <button onclick="openCreateModal()"><i class="fa-solid fa-circle-plus"></i>グループ</button>
+            <button onclick="window.location.href='https://choco-tube-nana-01.onrender.com'"><i class="fa-brands fa-youtube" style="color:red"></i>Tube</button>
         </footer>
     </div>
 
@@ -51,9 +51,17 @@
             <h3>部屋を作る</h3>
             <input type="text" id="new-room-name" placeholder="部屋名を入力">
             <div class="modal-btns">
-                <button onclick="closeModal()" class="btn-close">戻る</button>
+                <button onclick="closeModal('modal-group')" class="btn-close">戻る</button>
                 <button onclick="confirmCreateGroup()" class="btn-create">作成</button>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-users" class="modal">
+        <div class="modal-content">
+            <h3>参加メンバー</h3>
+            <div id="user-list" style="margin: 15px 0; text-align: left; max-height: 200px; overflow-y: auto;"></div>
+            <button onclick="closeModal('modal-users')" class="btn-close" style="width:100%">閉じる</button>
         </div>
     </div>
 
@@ -62,11 +70,12 @@
         let myName = "";
         let currentRoom = "全員チャット";
         let clickCount = 0;
+        let onlineNames = [];
         const sound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
         function login() {
             const user = document.getElementById('username').value.trim();
-            if(!user) return;
+            if(!user) return alert("名前を教えてね！");
             myName = user;
             socket.emit('login', myName);
             document.getElementById('page-login').classList.remove('active');
@@ -77,10 +86,10 @@
         function handleAdminClick() {
             clickCount++;
             if(clickCount >= 3) {
-                const pass = prompt("管理者パスワード");
+                const pass = prompt("管理者パスワードを入力");
                 if(pass === "0830") {
                     document.getElementById('admin-tools').style.display = 'block';
-                    alert("管理者モードON");
+                    alert("管理者ツール開放");
                 }
                 clickCount = 0;
             }
@@ -91,6 +100,12 @@
             if(confirm("この部屋の履歴をすべて消しますか？")) {
                 socket.emit('admin-clear-history', { room: currentRoom, password: "0830" });
             }
+        }
+
+        function showUsers() {
+            const list = document.getElementById('user-list');
+            list.innerHTML = onlineNames.map(u => `<div style="padding:5px; border-bottom:1px solid #eee;">🌸 ${u}</div>`).join('');
+            document.getElementById('modal-users').style.display = 'flex';
         }
 
         function changeRoom(name) {
@@ -107,18 +122,10 @@
             input.value = "";
         }
 
-        socket.on('load-history', (history) => history.forEach(addMessage));
-        socket.on('chat-message', (data) => {
-            addMessage(data);
-            if(data.name !== myName) sound.play().catch(()=>{});
-        });
-        socket.on('update-online-count', (count) => document.getElementById('online-count').innerText = count);
-
         function addMessage(data) {
             const box = document.getElementById('messages');
             const isMe = data.name === myName;
             const div = document.createElement('div');
-            // おみくじの場合は特別な色にする
             const isOmikuji = data.type === 'omikuji';
             div.className = `msg-bubble ${isMe ? 'my-msg' : 'other-msg'} ${isOmikuji ? 'omikuji-msg' : ''}`;
             div.innerHTML = `
@@ -130,11 +137,21 @@
             box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
         }
 
+        socket.on('load-history', (history) => history.forEach(addMessage));
+        socket.on('chat-message', (data) => {
+            addMessage(data);
+            if(data.name !== myName) sound.play().catch(()=>{});
+        });
+        socket.on('update-online-users', (users) => {
+            onlineNames = users;
+            document.getElementById('online-count').innerText = users.length;
+        });
+
         function openCreateModal() { document.getElementById('modal-group').style.display = 'flex'; }
-        function closeModal() { document.getElementById('modal-group').style.display = 'none'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         function confirmCreateGroup() {
             const name = document.getElementById('new-room-name').value.trim();
-            if(name) { changeRoom(name); closeModal(); }
+            if(name) { changeRoom(name); closeModal('modal-group'); }
         }
 
         document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMsg(); });
