@@ -3,124 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Naka-Chat Pro</title>
+    <title>仲良しCHAT Pro</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
-    <div id="page-login" class="page active">
-        <div class="login-box">
-            <div class="logo"><i class="fa-solid fa-comments"></i></div>
-            <h2>おかえりなさい！</h2>
-            <p>友達が待っています</p>
-            <input type="text" id="username" placeholder="名前を入力してください">
-            <button onclick="login()">ログイン</button>
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <i class="fa-solid fa-heart" style="font-size: 40px; color: var(--accent);"></i>
+            <h2 style="color: #555;">仲良しCHAT</h2>
+            <input type="text" id="username" placeholder="名前を入力..." maxlength="10">
+            <button onclick="login()" style="width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 15px; font-weight: bold;">はじめる</button>
         </div>
     </div>
 
-    <div id="page-home" class="page">
-        <header>ホーム</header>
-        <div class="content">
-            <div class="my-profile">
-                <div class="avatar"><i class="fa-solid fa-circle-user"></i></div>
-                <div class="name-area"><span id="my-name-display"></span> <small>(Online)</small></div>
-            </div>
-            <div class="section-title">フレンド (0)</div>
-            <p class="empty-msg">まだフレンドがいません。おぷちゃで探してみましょう！</p>
-        </div>
-        <nav class="bottom-nav"></nav>
+    <header>
+        <div style="font-weight: 800; color: #555; font-size: 1.2rem;">🌸 Naka-Chat</div>
+        <div class="online-badge"><i class="fa-solid fa-users"></i> <span id="online-count">0</span></div>
+    </header>
+
+    <div id="messages"></div>
+
+    <div class="input-area">
+        <input type="text" id="msg-input" placeholder="メッセージ..." autocomplete="off">
+        <button class="send-btn" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
 
-    <div id="page-rooms" class="page">
-        <header>オープンチャット</header>
-        <div class="content">
-            <div class="search-bar">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="target-room" placeholder="部屋名を入力...">
-                <button onclick="joinRoom()">参加</button>
-            </div>
-            <div class="room-list">
-                <div onclick="joinRoom('雑談部屋')" class="room-card">
-                    <div class="room-icon">🌸</div>
-                    <div class="room-info"><b>雑談部屋</b><br><small>誰でも歓迎！楽しく話そう</small></div>
-                </div>
-                <div onclick="joinRoom('ゲーム部屋')" class="room-card">
-                    <div class="room-icon">🎮</div>
-                    <div class="room-info"><b>ゲーム部屋</b><br><small>最新ゲームの話題はこちら</small></div>
-                </div>
-            </div>
-        </div>
-        <nav class="bottom-nav"></nav>
-    </div>
-
-    <div id="page-chat" class="page">
-        <header class="chat-header">
-            <button onclick="showPage('rooms')" class="back-btn"><i class="fa-solid fa-chevron-left"></i></button>
-            <span id="room-title">部屋名</span>
-            <i class="fa-solid fa-bars"></i>
-        </header>
-        <div id="messages"></div>
-        <div class="input-area">
-            <i class="fa-solid fa-plus"></i>
-            <input type="text" id="msg-input" placeholder="メッセージを入力...">
-            <button onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
-        </div>
-    </div>
+    <footer>
+        <button class="active"><i class="fa-solid fa-comment-dots"></i>チャット</button>
+        <button onclick="window.location.href='https://choco-tube-nana-01.onrender.com'"><i class="fa-brands fa-youtube" style="color:#ff0000"></i>YouTube</button>
+    </footer>
 
     <script>
         const socket = io();
         let myName = "";
-        let currentRoom = "";
-
-        // 下部ナビを生成
-        const navHtml = `
-            <button onclick="showPage('home')"><i class="fa-solid fa-user"></i><span>ホーム</span></button>
-            <button onclick="showPage('rooms')"><i class="fa-solid fa-comment"></i><span>チャット</span></button>
-            <button onclick="openYoutube()"><i class="fa-brands fa-youtube" style="color:red"></i><span>YouTube</span></button>
-        `;
-        document.querySelectorAll('.bottom-nav').forEach(nav => nav.innerHTML = navHtml);
-
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + id).classList.add('active');
-        }
+        const sound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
         function login() {
-            myName = document.getElementById('username').value;
-            if(!myName) return;
-            document.getElementById('my-name-display').innerText = myName;
-            showPage('home');
-        }
-
-        function openYoutube() { window.location.href = "https://choco-tube-nana-01.onrender.com"; }
-
-        function joinRoom(name) {
-            currentRoom = name || document.getElementById('target-room').value;
-            if(!currentRoom) return;
-            document.getElementById('room-title').innerText = currentRoom;
-            document.getElementById('messages').innerHTML = ""; 
-            socket.emit('join-room', currentRoom);
-            showPage('chat');
+            const user = document.getElementById('username').value.trim();
+            if(!user) return alert("名前を教えてね！");
+            myName = user;
+            document.getElementById('login-screen').style.display = 'none';
         }
 
         function sendMsg() {
             const input = document.getElementById('msg-input');
             if(!input.value.trim()) return;
-            socket.emit('chat-message', { roomId: currentRoom, name: myName, text: input.value });
+            socket.emit('chat-message', { name: myName, text: input.value });
             input.value = "";
         }
 
-        socket.on('chat-message', (data) => {
-            const msgBox = document.getElementById('messages');
+        function addMessage(data) {
+            const box = document.getElementById('messages');
             const isMe = data.name === myName;
             const div = document.createElement('div');
-            div.className = isMe ? 'msg-bubble my-msg' : 'msg-bubble other-msg';
-            div.innerHTML = (isMe ? "" : `<div class="user-name">${data.name}</div>`) + `<div class="text">${data.text}</div>`;
-            msgBox.appendChild(div);
-            msgBox.scrollTo({ top: msgBox.scrollHeight, behavior: 'smooth' });
+            div.className = `msg-bubble ${isMe ? 'my-msg' : 'other-msg'}`;
+            div.innerHTML = `
+                ${isMe ? '' : '<div class="user-name">' + data.name + '</div>'}
+                <div>${data.text}</div>
+                <div class="msg-time">${data.time}</div>
+            `;
+            box.appendChild(div);
+            box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+        }
+
+        socket.on('load-history', (history) => history.forEach(addMessage));
+        socket.on('chat-message', (data) => {
+            addMessage(data);
+            if(data.name !== myName) sound.play().catch(()=>{});
         });
+        socket.on('update-online-count', (count) => document.getElementById('online-count').innerText = count);
+
+        document.getElementById('msg-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMsg(); });
     </script>
 </body>
 </html>
